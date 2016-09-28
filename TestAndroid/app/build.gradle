@@ -1,5 +1,9 @@
 apply plugin: 'com.android.application'
 
+// 从环境变量中读取字符串或整数
+def env = { System.getenv it }
+def envInt = { Integer.parseInt(env(it)) }
+
 android {
     compileSdkVersion 24
     buildToolsVersion "23.0.3"
@@ -18,6 +22,25 @@ android {
         }
     }
 }
+
+if (env("ANDROID_SIGN_APK"))
+// 有环境变量时 才设置apk签名信息
+    android {
+        signingConfigs {
+            releaseSigning {
+                storeFile file(env("ANDROID_KEYSTORE_PATH"))
+                storePassword env("ANDROID_KEYSTORE_PASS")
+                keyAlias env("ANDROID_KEY_ALIAS")
+                keyPassword env("ANDROID_KEY_PASS")
+            }
+        }
+
+        buildTypes {
+            release {
+                signingConfig signingConfigs.releaseSigning
+            }
+        }
+    }
 
 dependencies {
     compile fileTree(dir: 'libs', include: ['*.jar'])
