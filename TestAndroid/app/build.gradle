@@ -1,12 +1,18 @@
 apply plugin: 'com.android.application'
 
-// 从环境变量中读取字符串或整数
-def env = { System.getenv it }
-def envInt = { Integer.parseInt(env(it)) }
-
 android {
     compileSdkVersion 24
     buildToolsVersion "23.0.3"
+
+    signingConfigs {
+        release{
+            storeFile
+            storePassword
+            keyAlias
+            keyPassword
+        }
+    }
+
     defaultConfig {
         applicationId "com.example.temp.testandroid"
         minSdkVersion 16
@@ -14,33 +20,37 @@ android {
         versionCode 1
         versionName "1.0"
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
+
+        File propFile = file('signing.properties');
+        if (propFile.exists()) {
+            println 'signing.properties exists'
+            def Properties props = new Properties()
+            props.load(new FileInputStream(propFile))
+            if (props.containsKey('STORE_FILE') && props.containsKey('STORE_PASSWORD') &&
+                    props.containsKey('KEY_ALIAS') && props.containsKey('KEY_PASSWORD')) {
+                android.signingConfigs.release.storeFile = file(props['STORE_FILE'])
+                android.signingConfigs.release.storePassword = props['STORE_PASSWORD']
+                android.signingConfigs.release.keyAlias = props['KEY_ALIAS']
+                android.signingConfigs.release.keyPassword = props['KEY_PASSWORD']
+            } else {
+                println 'signing.properties found but some entries are missing'
+                android.buildTypes.release.signingConfig = null
+            }
+        } else {
+            println 'signing.properties not found'
+            android.buildTypes.release.signingConfig = null
+        }
     }
+
     buildTypes {
         release {
             minifyEnabled false
+            signingConfig signingConfigs.release
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
     }
+
 }
-
-if (env("ANDROID_SIGN_APK"))
-// 有环境变量时 才设置apk签名信息
-    android {
-        signingConfigs {
-            releaseSigning {
-                storeFile file(env("ANDROID_KEYSTORE_PATH"))
-                storePassword env("ANDROID_KEYSTORE_PASS")
-                keyAlias env("ANDROID_KEY_ALIAS")
-                keyPassword env("ANDROID_KEY_PASS")
-            }
-        }
-
-        buildTypes {
-            release {
-                signingConfig signingConfigs.releaseSigning
-            }
-        }
-    }
 
 dependencies {
     compile fileTree(dir: 'libs', include: ['*.jar'])
